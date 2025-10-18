@@ -9,3 +9,6 @@ class QuestionType(Enum):
     MULTIPLE_CHOICE = "multiple_choice"
     CHECKBOXES = "checkboxes"
     DROPDOWN = "dropdown"
+    CHECKBOX_GRID = "checkbox_grid"
+    LINEAR_SCALE = "linear_scale"
+    FILE_UPLOAD = "file_upload"

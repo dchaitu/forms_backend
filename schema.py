@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 from enums import QuestionType
@@ -18,14 +20,43 @@ class FormCreate(BaseModel):
     questions: list[int]
 
 class FormDTO(FormCreate):
-    pass
+    form_id: int
 
+class FormDetailsDTO(BaseModel):
+    form_id: int
+    title: str
+    description: str
+
+class SectionCreate(BaseModel):
+    title: str
+    description: str
+    form_id: int
+
+class SectionDTO(SectionCreate):
+    section_id: int
+
+class SectionUpdate(BaseModel):
+    section_id: int
+    title: Optional[str]
+    description: Optional[str]
 
 class QuestionCreate(BaseModel):
+    section_id: int
     question_type: QuestionType
-    form_id: int
-    text: str
+    title: str
+    description: Optional[str]
     option_ids: list[int]
 
 class QuestionDTO(QuestionCreate):
-    pass
+    question_id: int
+
+class OptionCreate(BaseModel):
+    text: str
+    question_id: int
+
+class OptionDTO(OptionCreate):
+    option_id: int
+
+class OptionUpdate(BaseModel):
+    text: Optional[str]
+    option_id: Optional[int]
