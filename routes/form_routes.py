@@ -39,12 +39,14 @@ def update_form_details(form_id: int, form_dto: FormDetailsDTO):
         form = session.get(Form, form_id)
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
-        form.title = form_dto.title
-        form.description = form_dto.description
+        update_data = form_dto.model_dump(exclude_unset=True)
+
+        for key, value in update_data.items():
+            setattr(form, key, value)
         session.add(form)
         session.commit()
         session.refresh(form)
-    return form
+        return form
 
 
 @router.get("/all/", response_model=list[FormDTO])

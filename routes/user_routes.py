@@ -1,25 +1,38 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from constants import hash_password
 from models import User, engine
 from schema import UserCreate, UserDTO
 
 router = APIRouter(prefix='/user', tags=['User'])
 
 
-@router.post("/create/")
+@router.post("/create/", response_model=UserDTO)
 def create_user(user: UserCreate):
     with Session(engine) as session:
-        user_obj = User(username=user.username,
+        existing_user = session.query(User).filter(
+            (User.username == user.username) | (User.email_address == user.email_address)
+        ).first()
+        if existing_user:
+            raise HTTPException(status_code=409, detail="User already exists")
+        hashed_password = hash_password(user.password)
+
+        user_obj = User(
+                    username=user.username,
                     fullname=user.fullname,
                     email_address=user.email_address,
-                    last_login=[datetime.now()])
+                    password_hash=hashed_password
+                    )
         session.add(user_obj)
         session.commit()
-    user_dto = UserDTO.model_validate(user_obj)
+        session.refresh(user_obj)
+        user_dto = UserDTO.model_validate(user_obj)
+
+
     return user_dto
 
 @router.get("/all/")

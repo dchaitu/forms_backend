@@ -12,3 +12,5 @@ class QuestionType(Enum):
     CHECKBOX_GRID = "checkbox_grid"
     LINEAR_SCALE = "linear_scale"
     FILE_UPLOAD = "file_upload"
+    RATING = "rating"
+    MULTIPLE_CHOICE_GRID = "multiple_choice_grid"

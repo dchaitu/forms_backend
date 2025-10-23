@@ -11,9 +11,11 @@ def create_section(section_create: SectionCreate):
     with Session(engine) as session:
         db_section = Section(**section_create.model_dump())
         session.add(db_section)
+        section_dto = SectionDTO.model_validate(db_section)
         session.commit()
         session.refresh(db_section)
-        return db_section
+
+        return section_dto
 
 @router.post('/add/{question_id}/')
 def add_question_to_section(question_id: int, section_id: int):
@@ -25,8 +27,6 @@ def add_question_to_section(question_id: int, section_id: int):
         if not question:
             raise HTTPException(status_code=404, detail="Question not found")
 
-        # Note: A Question is already associated with a Section upon creation.
-        # This endpoint is redundant. 
         section.questions.append(question)
         session.commit()
     return {"message": "Question added to section successfully"}
@@ -66,3 +66,10 @@ def delete_section(section_id: int):
         session.delete(section)
         session.commit()
     return {"message": "Section deleted successfully"}
+
+
+@router.get("/all/", response_model=list[SectionDTO])
+def get_all_sections():
+    with Session(engine) as session:
+        sections = session.query(Section).all()
+        return sections

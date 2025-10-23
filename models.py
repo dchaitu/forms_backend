@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, String, Integer, Text, ForeignKey, Boolean, DateTime, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, Session
 import sqlalchemy as sa
+from sqlalchemy import Enum as SQLEnum
 
 from enums import QuestionType
 
@@ -25,8 +26,8 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String)
     fullname: Mapped[str] = mapped_column(String)
     email_address: Mapped[str] = mapped_column(String)
-    pic_url: Mapped[str] = mapped_column(String)
-    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    pic_url: Mapped[str] = mapped_column(String, default="https://randomuser.me/api/portraits/lego/2.jpg")
+    # last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=datetime.now())
     forms = relationship("Form", back_populates="user")
 
     def __str__(self):
@@ -43,7 +44,7 @@ class Form(Base):
     sections: Mapped[list["Section"]] = relationship(back_populates="form", cascade="all, delete")
     user: Mapped["User"] = relationship(back_populates="forms")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    form_image: Mapped[str] = mapped_column(String)
+    form_image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
 
 class Section(Base):
     __tablename__ = "Section"
@@ -53,7 +54,7 @@ class Section(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     form_id: Mapped[int] = mapped_column(ForeignKey("Form.id"))
     order: Mapped[int] = mapped_column(Integer, default=0)
-    # section_image: Mapped[str] = mapped_column(String)
+    section_image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     form: Mapped["Form"] = relationship(back_populates="sections")
     questions: Mapped[list["Question"]] = relationship(back_populates="section", cascade="all, delete")
 
@@ -62,7 +63,7 @@ class Question(Base):
     __tablename__ = "Question"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    question_type: Mapped[QuestionType] = mapped_column(String)
+    question_type: Mapped[QuestionType] = mapped_column(SQLEnum(QuestionType, name="question_type", native_enum=False))
     section_id: Mapped[int] = mapped_column(ForeignKey("Section.id"))
     title: Mapped[str] = mapped_column(String)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -71,7 +72,7 @@ class Question(Base):
     answers: Mapped[list["Answer"]] = relationship(back_populates="question")
     is_required: Mapped[bool] = mapped_column(Boolean, default=True)
     order: Mapped[int] = mapped_column(Integer, default=0)
-    question_image: Mapped[str] = mapped_column(String)
+    question_image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
 
 class Option(Base):
     __tablename__ = "Option"
@@ -81,7 +82,7 @@ class Option(Base):
     text: Mapped[str] = mapped_column(String)
     question: Mapped["Question"] = relationship(back_populates="options")
     answers: Mapped[list["Answer"]] = relationship(back_populates="option", cascade="all, delete")
-    option_image: Mapped[str] = mapped_column(String)
+    option_image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
 
 class Response(Base):
     __tablename__ = "Response"
@@ -114,4 +115,5 @@ with Session(engine) as session:
     # chaitu = User(username="chaitu", fullname="Chaitanya", email_address="chaitu@gmail.com", last_login=datetime.now())
     # lokesh = User(username="lokesh", fullname="Lokesh", email_address="lokesh@gmail.com", last_login=datetime.now())
     # session.add(chaitu)
+    create_tables()
     session.commit()

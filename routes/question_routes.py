@@ -17,8 +17,10 @@ def create_question(question_create: QuestionCreate):
     with Session(engine) as session:
         question_data = question_create.model_dump()
         option_texts = question_data.pop('options', None)
+        question_type_enum = question_data.pop('question_type')
 
         db_question = Question(**question_data)
+        db_question.question_type = QuestionType(question_type_enum)
 
         if question_create.question_type in [QuestionType.MULTIPLE_CHOICE, QuestionType.CHECKBOXES, QuestionType.DROPDOWN]:
             if option_texts:
@@ -28,7 +30,17 @@ def create_question(question_create: QuestionCreate):
         session.add(db_question)
         session.commit()
         session.refresh(db_question)
-        return db_question
+        
+        question_dto = QuestionDTO(
+            question_id=db_question.id,
+            section_id=db_question.section_id,
+            question_type=db_question.question_type,
+            title=db_question.title,
+            description=db_question.description,
+            is_required=db_question.is_required,
+            options=[option.text for option in db_question.options] if db_question.options else []
+        )
+        return question_dto
 
 @router.get("/{question_id}", response_model=QuestionDTO)
 def get_question(question_id: int):
