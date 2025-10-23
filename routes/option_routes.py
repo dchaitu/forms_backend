@@ -7,7 +7,7 @@ from schema import OptionCreate, OptionDTO, OptionUpdate
 
 router = APIRouter(prefix='/option', tags=['Option'])
 
-@router.post("/create/")
+@router.post("/create/", response_model=OptionDTO)
 def create_option(option: OptionCreate):
     with Session(engine) as session:
         question = session.get(Question, option.question_id)
@@ -35,7 +35,7 @@ def update_option(option_update:OptionUpdate):
         session.add(option)
         session.commit()
         session.refresh(option)
-    return option
+        return OptionDTO.model_validate(option)
 
 @router.delete("/{option_id}")
 def delete_option(option_id: int):
@@ -47,3 +47,9 @@ def delete_option(option_id: int):
         session.commit()
     return {"message": "Option deleted successfully"}
 
+
+@router.get("/all/", response_model=list[OptionDTO])
+def get_all_options():
+    with Session(engine) as session:
+        options = session.query(Option).all()
+        return [OptionDTO.model_validate(option) for option in options]

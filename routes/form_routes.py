@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from models import Form, engine, Section
-from schema import FormCreate, FormDTO, FormDetailsDTO
+from models import Form, engine, Section, Question
+from schema import FormCreate, FormDTO, FormDetailsDTO, FormCompleteDetailsDTO, SectionCompleteDetailsDTO, QuestionDTO, \
+    OptionDTO
 
 router = APIRouter(prefix='/form', tags=['Form'])
 
@@ -15,7 +16,7 @@ def create_form(form_create: FormCreate):
         session.add(db_form)
         session.commit()
         session.refresh(db_form)
-        return db_form
+        return FormDTO.model_validate(db_form)
 
 @router.post("/add/{section_id}/")
 def add_section_to_form(section_id: int, form_id: int):
@@ -46,7 +47,7 @@ def update_form_details(form_id: int, form_dto: FormDetailsDTO):
         session.add(form)
         session.commit()
         session.refresh(form)
-        return form
+        return FormDTO.model_validate(form)
 
 
 @router.get("/all/", response_model=list[FormDTO])
@@ -54,7 +55,7 @@ def get_all_forms():
     with Session(engine) as session:
         query = select(Form)
         forms = session.scalars(query).all()
-        return forms
+        return [FormDTO.model_validate(form) for form in forms]
 
 @router.get("/{form_id}", response_model=FormDetailsDTO)
 def get_form(form_id: int):
@@ -62,7 +63,7 @@ def get_form(form_id: int):
         form = session.get(Form, form_id)
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
-        return form
+        return FormDetailsDTO.model_validate(form)
 
 @router.delete("/{form_id}")
 def delete_form(form_id: int):
@@ -73,3 +74,57 @@ def delete_form(form_id: int):
         session.delete(form)
         session.commit()
     return {"message": "Form deleted successfully"}
+
+@router.get("/{form_id}/complete/", response_model=FormCompleteDetailsDTO)
+def get_form_complete_details(form_id: int):
+    with Session(engine) as session:
+        form = (
+            session.query(Form)
+            .options(
+                joinedload(Form.sections)
+                .joinedload(Section.questions)
+                .joinedload(Question.options)
+            )
+            .filter(Form.id == form_id)
+            .first()
+        )
+
+
+        if not form:
+            raise HTTPException(status_code=404, detail="Form not found")
+        sections_dto = []
+        for section in form.sections:
+            # Build nested question DTOs manually
+            questions_dto = []
+            for question in section.questions:
+                options_dto = [
+                    OptionDTO.model_validate(opt) for opt in question.options
+                ]
+                question_dto = QuestionDTO(
+                    id=question.id,
+                    section_id=question.section_id,
+                    title=question.title,
+                    description=question.description,
+                    question_type=question.question_type,
+                    is_required=question.is_required,
+                    options=options_dto,
+                )
+                questions_dto.append(question_dto)
+
+            section_dto = SectionCompleteDetailsDTO(
+                id=section.id,
+                title=section.title,
+                description=section.description,
+                form_id=section.form_id,
+                questions=questions_dto,
+            )
+            sections_dto.append(section_dto)
+
+        return FormCompleteDetailsDTO(
+            id=form.id,
+            title=form.title,
+            description=form.description,
+            sections=sections_dto,
+        )
+
+

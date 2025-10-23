@@ -1,8 +1,5 @@
 from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
-from pygments.lexer import default
-
 from enums import QuestionType
 
 
@@ -26,6 +23,7 @@ class FormCreate(BaseModel):
     # questions: list[int]
 
 class FormDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
     description: str
@@ -44,12 +42,21 @@ class SectionCreate(BaseModel):
     form_id: int
 
 class SectionDTO(SectionCreate):
-    section_id: int
+    model_config = ConfigDict(from_attributes=True)
+    id: int
 
 class SectionUpdate(BaseModel):
     section_id: int
     title: Optional[str]
     description: Optional[str]
+
+class OptionCreate(BaseModel):
+    text: str
+    question_id: int
+
+class OptionDTO(OptionCreate):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
 
 class QuestionCreate(BaseModel):
     section_id: int
@@ -57,17 +64,13 @@ class QuestionCreate(BaseModel):
     title: str
     description: Optional[str]
     is_required: bool
-    options: Optional[list[str]] = None
+    options: Optional[list[OptionDTO]] = None
 
 class QuestionDTO(QuestionCreate):
-    question_id: int
+    model_config = ConfigDict(from_attributes=True)
+    id: int
 
-class OptionCreate(BaseModel):
-    text: str
-    question_id: int
 
-class OptionDTO(OptionCreate):
-    option_id: int
 
 class OptionUpdate(BaseModel):
     text: Optional[str]
@@ -77,3 +80,18 @@ class QuestionUpdate(BaseModel):
     title: Optional[str]
     description: Optional[str]
     question_type: Optional[QuestionType]
+
+class SectionCompleteDetailsDTO(BaseModel):
+    id: int
+    title: Optional[str] = None
+    description: Optional[str] = None
+    questions: list[QuestionDTO] = []
+    form_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class FormCompleteDetailsDTO(BaseModel):
+    id: int
+    title: Optional[str] = None
+    description: Optional[str] = None
+    sections: list[SectionCompleteDetailsDTO] = []
+    model_config = ConfigDict(from_attributes=True)

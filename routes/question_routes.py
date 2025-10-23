@@ -48,7 +48,15 @@ def get_question(question_id: int):
         question = session.get(Question, question_id)
         if not question:
             raise HTTPException(status_code=404, detail="Question not found")
-        return question
+        return QuestionDTO(
+            question_id=question.id,
+            section_id=question.section_id,
+            question_type=question.question_type,
+            title=question.title,
+            description=question.description,
+            is_required=question.is_required,
+            options=[option.text for option in question.options] if question.options else []
+        )
 
 @router.put("/{question_id}", response_model=QuestionDTO)
 def update_question(question_id: int, question_update: QuestionUpdate):
@@ -64,7 +72,15 @@ def update_question(question_id: int, question_update: QuestionUpdate):
         session.add(question)
         session.commit()
         session.refresh(question)
-        return question
+        return QuestionDTO(
+            question_id=question.id,
+            section_id=question.section_id,
+            question_type=question.question_type,
+            title=question.title,
+            description=question.description,
+            is_required=question.is_required,
+            options=[option.text for option in question.options] if question.options else []
+        )
 
 @router.delete("/{question_id}")
 def delete_question(question_id: int):
@@ -75,3 +91,9 @@ def delete_question(question_id: int):
         session.delete(question)
         session.commit()
     return {"message": "Question deleted successfully"}
+
+@router.get("/all/", response_model=list[QuestionDTO])
+def get_all_questions():
+    with Session(engine) as session:
+        questions = session.query(Question).all()
+        return [QuestionDTO.model_validate(question) for question in questions]

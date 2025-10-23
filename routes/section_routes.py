@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
 from models import engine, Section, Question
-from schema import SectionCreate, SectionDTO, SectionUpdate
+from schema import SectionCreate, SectionDTO, SectionUpdate, QuestionDTO, SectionCompleteDetailsDTO
 
 router = APIRouter(prefix='/section', tags=['Section'])
 
@@ -37,7 +37,7 @@ def get_section(section_id: int):
         section = session.get(Section, section_id)
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
-        return section
+        return SectionDTO.model_validate(section)
 
 @router.put("/", response_model=SectionDTO)
 def update_section(section_update: SectionUpdate):
@@ -55,7 +55,7 @@ def update_section(section_update: SectionUpdate):
         session.add(section)
         session.commit()
         session.refresh(section)
-        return section
+        return SectionDTO.model_validate(section)
 
 @router.delete("/{section_id}")
 def delete_section(section_id: int):
@@ -72,4 +72,21 @@ def delete_section(section_id: int):
 def get_all_sections():
     with Session(engine) as session:
         sections = session.query(Section).all()
-        return sections
+        return [SectionDTO.model_validate(section) for section in sections]
+
+
+@router.get("/{section_id}/complete/", response_model=SectionCompleteDetailsDTO)
+def get_section_questions(section_id: int):
+    with Session(engine) as session:
+        section = session.get(Section, section_id)
+        if not section:
+            raise HTTPException(status_code=404, detail="Section not found")
+
+        section_dto = SectionCompleteDetailsDTO(
+            id=section.id,
+            title=section.title,
+            description=section.description,
+            questions=[QuestionDTO.model_validate(question) for question in section.questions],
+            form_id=section.form_id
+        )
+        return section_dto
