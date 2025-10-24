@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from enums import QuestionType
 from models import Question, engine, Option
-from schema import QuestionCreate, QuestionDTO, QuestionUpdate
+from schema import QuestionCreate, QuestionDTO, QuestionUpdate, OptionDTO
 
 router = APIRouter(prefix='/question', tags=['Question'])
 
@@ -49,7 +49,7 @@ def get_question(question_id: int):
         if not question:
             raise HTTPException(status_code=404, detail="Question not found")
         return QuestionDTO(
-            question_id=question.id,
+            id=question.id,
             section_id=question.section_id,
             question_type=question.question_type,
             title=question.title,
@@ -69,18 +69,33 @@ def update_question(question_id: int, question_update: QuestionUpdate):
         for key, value in update_data.items():
             setattr(question, key, value)
 
-        session.add(question)
+        # Handle options if provided
+        if question_update.options is not None:
+            existing_options = {opt.id: opt for opt in question.options}
+            incoming_ids = {opt.id for opt in question_update.options if opt.id}
+
+            # Add or update options
+            for opt_data in question_update.options:
+                if opt_data.id in existing_options:
+                    # Update existing option
+                    existing_options[opt_data.id].text = opt_data.text
+                else:
+                    # Add new option
+                    new_option = Option(text=opt_data.text, question_id=question.id)
+                    session.add(new_option)
+
+            # Delete options not in incoming list
+            for opt_id in set(existing_options.keys()) - incoming_ids:
+                session.delete(existing_options[opt_id])
+
+        # Save changes
         session.commit()
         session.refresh(question)
-        return QuestionDTO(
-            question_id=question.id,
-            section_id=question.section_id,
-            question_type=question.question_type,
-            title=question.title,
-            description=question.description,
-            is_required=question.is_required,
-            options=[option.text for option in question.options] if question.options else []
-        )
+
+        # Reload full question (with updated options)
+        session.refresh(question)
+        return QuestionDTO.model_validate(question)
+
 
 @router.delete("/{question_id}")
 def delete_question(question_id: int):

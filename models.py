@@ -45,6 +45,8 @@ class Form(Base):
     user: Mapped["User"] = relationship(back_populates="forms")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     form_image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    response_link: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True)
+    responses: Mapped[list["Response"]] = relationship(back_populates="form", cascade="all, delete")
 
 class Section(Base):
     __tablename__ = "Section"
@@ -91,8 +93,9 @@ class Response(Base):
     form_id: Mapped[int] = mapped_column(ForeignKey("Form.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("User.user_id"))
     answers: Mapped[list["Answer"]] = relationship(back_populates="response", cascade="all, delete")
+    response_data: Mapped[String] = mapped_column(String)
     submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
-
+    form: Mapped["Form"] = relationship(back_populates="responses")
 
 class Answer(Base):
     __tablename__ = "Answer"

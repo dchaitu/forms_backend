@@ -11,6 +11,7 @@ from routes.form_routes import router as form_router
 from routes.section_routes import router as section_router
 from routes.question_routes import router as question_router
 from routes.option_routes import router as option_router
+from routes.response_routes import router as response_router
 
 app = FastAPI()
 app.include_router(user_router)
@@ -18,6 +19,7 @@ app.include_router(form_router)
 app.include_router(section_router)
 app.include_router(question_router)
 app.include_router(option_router)
+app.include_router(response_router)
 
 origins = [
     "http://localhost",

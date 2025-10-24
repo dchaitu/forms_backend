@@ -27,6 +27,7 @@ class FormDTO(BaseModel):
     id: int
     title: str
     description: str
+    response_link: Optional[str] = None
 
 class FormCompleteDTO(FormCreate):
     form_id: int
@@ -73,13 +74,16 @@ class QuestionDTO(QuestionCreate):
 
 
 class OptionUpdate(BaseModel):
-    text: Optional[str]
-    option_id: Optional[int]
+    id: Optional[int] = None
+    text: str
 
 class QuestionUpdate(BaseModel):
-    title: Optional[str]
+    section_id: int
+    question_type: QuestionType
+    title: str
     description: Optional[str]
-    question_type: Optional[QuestionType]
+    is_required: bool
+    options: Optional[list[OptionUpdate]] = None
 
 class SectionCompleteDetailsDTO(BaseModel):
     id: int
@@ -94,4 +98,12 @@ class FormCompleteDetailsDTO(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     sections: list[SectionCompleteDetailsDTO] = []
+    response_link: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class ResponseDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    form_id: int
+    response_data: str

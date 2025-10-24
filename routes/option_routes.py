@@ -24,18 +24,30 @@ def create_option(option: OptionCreate):
 
     return option_dto
 
-@router.put("/", response_model=OptionDTO)
-def update_option(option_update:OptionUpdate):
+@router.put("/{question_id}", response_model=list[OptionDTO])
+def update_options(question_id: int, options_update: list[OptionUpdate]):
     with Session(engine) as session:
-        option = session.get(Option, option_update.option_id)
-        if not option:
-            raise HTTPException(status_code=404, detail="Option not found")
+        question = session.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
 
-        option.text = option_update.text
-        session.add(option)
+        existing_options = {opt.id: opt for opt in question.options}
+        incoming_ids = {opt.id for opt in options_update if opt.id}
+
+        # update and add
+        for opt_data in options_update:
+            if opt_data.id in existing_options:
+                existing_options[opt_data.id].text = opt_data.text
+            else:
+                session.add(Option(text=opt_data.text, question_id=question_id))
+
+        # delete removed
+        for opt_id in set(existing_options.keys()) - incoming_ids:
+            session.delete(existing_options[opt_id])
+
         session.commit()
-        session.refresh(option)
-        return OptionDTO.model_validate(option)
+        updated = session.query(Option).filter(Option.question_id == question_id).all()
+        return [OptionDTO.model_validate(o) for o in updated]
 
 @router.delete("/{option_id}")
 def delete_option(option_id: int):
