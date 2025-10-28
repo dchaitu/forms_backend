@@ -40,13 +40,15 @@ def get_form_responses_csv(form_id: int):
 
         with open('data.csv', 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["response_id", "user_id", "question_id","question_title", "question_description", "answer_description"])
+            writer.writerow(["response_id", "user_id", "section_id", "question_id","question_title", "question_description", "answer_description"])
             for response in responses:
                 response_info = json.loads(response.response_data)
                 for key, val in response_info.items():
                     response_id = response.id
                     user_id = response.user_id
-                    question_id = session.get(Question, key).id
+                    question = session.get(Question, key)
+                    question_id = question.id
+                    section_id = question.section_id
                     question_title = session.get(Question, key).title
                     question_description = session.get(Question, key).description or ""
                     if type(val) == int:
@@ -56,6 +58,6 @@ def get_form_responses_csv(form_id: int):
                     else:
                         answer_description = val
 
-                    writer.writerow([response_id, user_id, question_id, question_title, question_description, answer_description])
+                    writer.writerow([response_id, user_id, section_id, question_id, question_title, question_description, answer_description])
 
     return FileResponse(media_type="text/csv", filename="data_response.csv",path="data.csv")

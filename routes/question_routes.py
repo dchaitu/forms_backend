@@ -32,7 +32,7 @@ def create_question(question_create: QuestionCreate):
         session.refresh(db_question)
         
         question_dto = QuestionDTO(
-            question_id=db_question.id,
+            id=db_question.id,
             section_id=db_question.section_id,
             question_type=db_question.question_type,
             title=db_question.title,
@@ -65,7 +65,7 @@ def update_question(question_id: int, question_update: QuestionUpdate):
         if not question:
             raise HTTPException(status_code=404, detail="Question not found")
 
-        update_data = question_update.model_dump(exclude_unset=True)
+        update_data = question_update.model_dump(exclude_unset=True, exclude={"options"})
         for key, value in update_data.items():
             setattr(question, key, value)
 

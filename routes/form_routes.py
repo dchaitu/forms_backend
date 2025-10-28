@@ -19,6 +19,10 @@ def create_form(form_create: FormCreate):
         session.add(db_form)
         session.commit()
         session.refresh(db_form)
+        default_section = Section(title="Untitled Section", description="", form_id=db_form.id)
+        session.add(default_section)
+        session.commit()
+        session.refresh(db_form)
         return FormDTO.model_validate(db_form)
 
 @router.post("/add/{section_id}/")
@@ -169,7 +173,6 @@ def get_form_by_uuid(unique_id: str):
     Retrieves the complete details of a form using the unique ID from its response link.
     This is used to render the form for a user to answer.
     """
-    # Find the form where the response_link contains the unique_id
     with Session(engine) as session:
         form = (
             session.query(Form)
@@ -185,12 +188,9 @@ def get_form_by_uuid(unique_id: str):
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
 
-    # Here, you can reuse the serialization logic from your get_form_complete_details endpoint
-    # to build the complete DTO with sections, questions, and options.
-    # For simplicity, I'm showing a conceptual call to a helper function.
+
     sections_dto = []
     for section in form.sections:
-        # Build nested question DTOs manually
         questions_dto = []
         for question in section.questions:
             options_dto = [

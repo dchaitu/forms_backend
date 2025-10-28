@@ -63,7 +63,7 @@ class QuestionCreate(BaseModel):
     section_id: int
     question_type: QuestionType
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     is_required: bool
     options: Optional[list[OptionDTO]] = None
 

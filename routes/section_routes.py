@@ -11,11 +11,10 @@ def create_section(section_create: SectionCreate):
     with Session(engine) as session:
         db_section = Section(**section_create.model_dump())
         session.add(db_section)
-        section_dto = SectionDTO.model_validate(db_section)
         session.commit()
         session.refresh(db_section)
 
-        return section_dto
+        return SectionDTO.model_validate(db_section)
 
 @router.post('/add/{question_id}/')
 def add_question_to_section(question_id: int, section_id: int):
