@@ -1,3 +1,4 @@
+import base64
 import json
 import uuid
 
@@ -5,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from models import Form, engine, Section, Question, Response
+from models import Form, engine, Section, Question, Response, User
 from schema import FormCreate, FormDTO, FormDetailsDTO, FormCompleteDetailsDTO, SectionCompleteDetailsDTO, QuestionDTO, \
     OptionDTO, ResponseDTO
 
@@ -64,6 +65,20 @@ def get_all_forms():
         forms = session.scalars(query).all()
         return [FormDTO.model_validate(form) for form in forms]
 
+
+@router.get("/{user_id}/all/")
+def get_user_forms(user_id: int)-> list[FormDTO]:
+    with Session(engine) as session:
+        forms = (
+            session.query(Form)
+            .join(Form.user)
+            .filter(User.user_id == user_id)
+            .options(joinedload(Form.user))
+            .all()
+        )
+        forms_dtos = [FormDTO.model_validate(form) for form in forms]
+        return forms_dtos
+
 @router.get("/{form_id}", response_model=FormDetailsDTO)
 def get_form(form_id: int):
     with Session(engine) as session:
@@ -107,6 +122,11 @@ def get_form_complete_details(form_id: int):
                 options_dto = [
                     OptionDTO.model_validate(opt) for opt in question.options
                 ]
+                encoded_image = (
+                    base64.b64encode(question.question_image).decode("utf-8")
+                    if question.question_image
+                    else None
+                )
                 question_dto = QuestionDTO(
                     id=question.id,
                     section_id=question.section_id,
@@ -115,6 +135,7 @@ def get_form_complete_details(form_id: int):
                     question_type=question.question_type,
                     is_required=question.is_required,
                     options=options_dto,
+                    question_image=encoded_image
                 )
                 questions_dto.append(question_dto)
 

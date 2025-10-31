@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from enums import QuestionType
 
 
@@ -8,6 +8,11 @@ class UserCreate(BaseModel):
     fullname: str
     email_address: str
     password: str
+    pic_url: Optional[str] = Field(default=None, alias="pic_url")
+
+class UserLoginDTO(BaseModel):
+    username: str
+    password: str
 
 class UserDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -15,6 +20,8 @@ class UserDTO(BaseModel):
     username: str
     fullname: str
     email_address: str
+    pic_url: Optional[str] = None
+
 
 class FormCreate(BaseModel):
     title: str
@@ -66,10 +73,12 @@ class QuestionCreate(BaseModel):
     description: Optional[str] = None
     is_required: bool
     options: Optional[list[OptionDTO]] = None
+    question_image: Optional[bytes] = None
 
 class QuestionDTO(QuestionCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    question_image: Optional[bytes] = None
 
 
 
@@ -83,6 +92,7 @@ class QuestionUpdate(BaseModel):
     title: str
     description: Optional[str]
     is_required: bool
+    question_image: Optional[bytes] = None
     options: Optional[list[OptionUpdate]] = None
 
 class SectionCompleteDetailsDTO(BaseModel):
@@ -107,3 +117,10 @@ class ResponseDTO(BaseModel):
     id: int
     form_id: int
     response_data: str
+
+
+class ResponseCountDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    form_id: int
+    count: int
+

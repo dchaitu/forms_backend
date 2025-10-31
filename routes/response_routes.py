@@ -2,11 +2,12 @@ import csv
 import json
 
 from fastapi import APIRouter
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi.responses import FileResponse
 
-from models import engine, Response, Question, Option
-from schema import ResponseDTO
+from models import engine, Response, Question, Option, Form
+from schema import ResponseDTO, ResponseCountDTO
 
 router = APIRouter(prefix='/response', tags=['Response'])
 
@@ -18,6 +19,22 @@ router = APIRouter(prefix='/response', tags=['Response'])
 #         session.add(new_response)
 #         session.commit()
 #     return {"message": "Response submitted successfully"}
+@router.get('/count/', response_model=list[ResponseCountDTO])
+def get_each_response_count():
+    with Session(engine) as session:
+        results = (
+            session.query(Response.form_id, func.count(Response.id).label("count"))
+            .join(Form, Response.form_id == Form.id)
+            .group_by(Response.form_id)
+            .all()
+        )
+
+        response_counts = [
+            ResponseCountDTO(form_id=form_id, count=count)
+            for form_id, count in results
+        ]
+        return response_counts
+
 
 @router.get("/{form_id}/count")
 def get_response_count(form_id: int):
@@ -61,3 +78,7 @@ def get_form_responses_csv(form_id: int):
                     writer.writerow([response_id, user_id, section_id, question_id, question_title, question_description, answer_description])
 
     return FileResponse(media_type="text/csv", filename="data_response.csv",path="data.csv")
+
+
+
+

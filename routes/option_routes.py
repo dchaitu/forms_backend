@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from enums import QuestionType
@@ -65,3 +65,14 @@ def get_all_options():
     with Session(engine) as session:
         options = session.query(Option).all()
         return [OptionDTO.model_validate(option) for option in options]
+
+
+@router.post("/upload_image/{option_id}")
+def upload_option_image(option_id: int, file: UploadFile = File(...)):
+    with Session(engine) as session:
+        option = session.get(Option, option_id)
+        if not option:
+            raise HTTPException(status_code=404, detail="Option not found")
+        option.option_image = file.file.read()
+        session.commit()
+    return {"message": "Option image uploaded successfully"}

@@ -2,38 +2,15 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
-from constants import hash_password
-from models import User, engine
-from schema import UserCreate, UserDTO
+from models import User, engine, Form
+from schema import UserCreate, UserDTO, FormDTO
 
 router = APIRouter(prefix='/user', tags=['User'])
 
 
-@router.post("/create/", response_model=UserDTO)
-def create_user(user: UserCreate):
-    with Session(engine) as session:
-        existing_user = session.query(User).filter(
-            (User.username == user.username) | (User.email_address == user.email_address)
-        ).first()
-        if existing_user:
-            raise HTTPException(status_code=409, detail="User already exists")
-        hashed_password = hash_password(user.password)
 
-        user_obj = User(
-                    username=user.username,
-                    fullname=user.fullname,
-                    email_address=user.email_address,
-                    password_hash=hashed_password
-                    )
-        session.add(user_obj)
-        session.commit()
-        session.refresh(user_obj)
-        user_dto = UserDTO.model_validate(user_obj)
-
-
-    return user_dto
 
 @router.get("/all/")
 def get_all_users() -> list[UserDTO]:
@@ -59,3 +36,17 @@ def get_user_by_username(username: str)-> UserDTO:
         user = session.scalar(query)
         user_dto = UserDTO.model_validate(user)
         return user_dto
+
+
+@router.get("/{user_id}/forms")
+def get_user_forms(user_id: int)-> list[FormDTO]:
+    with Session(engine) as session:
+        forms = (
+            session.query(Form)
+            .join(Form.user)
+            .filter(User.user_id == user_id)
+            .options(joinedload(Form.user))
+            .all()
+        )
+        forms_dtos = [FormDTO.model_validate(form) for form in forms]
+        return forms_dtos

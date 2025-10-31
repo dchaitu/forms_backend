@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException
+import base64
+import os
+
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
+from constants import UPLOAD_DIR
 from enums import QuestionType
 from models import Question, engine, Option
 from schema import QuestionCreate, QuestionDTO, QuestionUpdate, OptionDTO
@@ -38,7 +42,8 @@ def create_question(question_create: QuestionCreate):
             title=db_question.title,
             description=db_question.description,
             is_required=db_question.is_required,
-            options=[option.text for option in db_question.options] if db_question.options else []
+            options=[option.text for option in db_question.options] if db_question.options else [],
+            question_image=db_question.question_image
         )
         return question_dto
 
@@ -55,7 +60,8 @@ def get_question(question_id: int):
             title=question.title,
             description=question.description,
             is_required=question.is_required,
-            options=[option.text for option in question.options] if question.options else []
+            options=[option.text for option in question.options] if question.options else [],
+            question_image=question.question_image
         )
 
 @router.put("/{question_id}", response_model=QuestionDTO)
@@ -68,6 +74,9 @@ def update_question(question_id: int, question_update: QuestionUpdate):
         update_data = question_update.model_dump(exclude_unset=True, exclude={"options"})
         for key, value in update_data.items():
             setattr(question, key, value)
+
+        if question_update.question_image is not None:
+            question.question_image = base64.b64decode(question_update.question_image)
 
         # Handle options if provided
         if question_update.options is not None:
@@ -92,9 +101,10 @@ def update_question(question_id: int, question_update: QuestionUpdate):
         session.commit()
         session.refresh(question)
 
-        # Reload full question (with updated options)
-        session.refresh(question)
-        return QuestionDTO.model_validate(question)
+        dto = QuestionDTO.model_validate(question)
+        if question.question_image:
+            dto.question_image = base64.b64encode(question.question_image).decode('utf-8')
+        return dto
 
 
 @router.delete("/{question_id}")
@@ -111,4 +121,37 @@ def delete_question(question_id: int):
 def get_all_questions():
     with Session(engine) as session:
         questions = session.query(Question).all()
-        return [QuestionDTO.model_validate(question) for question in questions]
+        result = []
+        for q in questions:
+            dto = QuestionDTO.model_validate(q)
+            if q.question_image:
+                dto.question_image = base64.b64encode(q.question_image).decode('utf-8')
+            result.append(dto)
+        return result
+
+@router.post("/upload_image/{question_id}")
+def upload_question_image(question_id: int, file: UploadFile = File(...)):
+    with Session(engine) as session:
+        question = session.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+        question.question_image = file.file.read()
+        session.commit()
+        session.refresh(question)
+
+        dto = QuestionDTO.model_validate(question)
+        if question.question_image:
+            dto.question_image = base64.b64encode(question.question_image).decode('utf-8')
+        return dto
+
+
+@router.delete("/upload_image/{question_id}")
+def delete_question_image(question_id: int):
+    with Session(engine) as session:
+        question = session.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+        question.question_image = None
+        session.commit()
+        session.refresh(question)
+    return {"message": "Question image deleted successfully"}

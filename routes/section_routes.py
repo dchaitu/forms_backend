@@ -1,3 +1,5 @@
+import base64
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
@@ -81,11 +83,18 @@ def get_section_questions(section_id: int):
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
 
+        questions_dtos = []
+        for question in section.questions:
+            dto = QuestionDTO.model_validate(question)
+            if question.question_image:
+                dto.question_image = base64.b64encode(question.question_image).decode('utf-8')
+            questions_dtos.append(dto)
+
         section_dto = SectionCompleteDetailsDTO(
             id=section.id,
             title=section.title,
             description=section.description,
-            questions=[QuestionDTO.model_validate(question) for question in section.questions],
+            questions=questions_dtos,
             form_id=section.form_id
         )
         return section_dto
