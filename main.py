@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from fastapi import FastAPI, HTTPException
 from mangum import Mangum
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
-from constants import UPLOAD_DIR, hash_password, verify_password
+from constants import UPLOAD_DIR, hash_password, verify_password, create_access_token
 from models import User, engine
 from routes.user_routes import router as user_router
 from routes.form_routes import router as form_router
@@ -74,6 +75,10 @@ def login_user(user_info: UserLoginDTO):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if not verify_password(user_info.password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        access_token = create_access_token(user_info.username)
+        refresh_token = create_access_token(user_info.username, timedelta(days=30))
+
         return UserDTO.model_validate(user)
 
 def handler(event, context):

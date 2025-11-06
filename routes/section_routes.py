@@ -1,6 +1,7 @@
 import base64
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models import engine, Section, Question
@@ -11,12 +12,27 @@ router = APIRouter(prefix='/section', tags=['Section'])
 @router.post("/create/", response_model=SectionDTO)
 def create_section(section_create: SectionCreate):
     with Session(engine) as session:
-        db_section = Section(**section_create.model_dump())
+        max_order = session.query(func.max(Section.order)).filter(
+            Section.form_id == section_create.form_id
+        ).scalar()
+        new_order = max_order + 1 if max_order is not None else 0
+
+        db_section = Section(**section_create.model_dump(), order=new_order)
         session.add(db_section)
         session.commit()
         session.refresh(db_section)
 
         return SectionDTO.model_validate(db_section)
+
+@router.put("/reorder/")
+def reorder_sections(sections: list[dict]):
+    with Session(engine) as session:
+        for sec in sections:
+            section = session.get(Section, sec["id"])
+            if section:
+                section.order = sec["order"]
+        session.commit()
+    return {"message": "Sections reordered successfully"}
 
 @router.post('/add/{question_id}/')
 def add_question_to_section(question_id: int, section_id: int):
