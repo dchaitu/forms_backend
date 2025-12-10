@@ -9,7 +9,7 @@ from sqlalchemy import Enum as SQLEnum
 from enums import QuestionType
 
 
-engine = sa.create_engine("sqlite:///forms.db") # Creates db
+# engine = sa.create_engine("sqlite:///forms.db") # Creates db
 
  # Defining Base for ORM models
 # metadata = sa.MetaData()
@@ -17,6 +17,7 @@ engine = sa.create_engine("sqlite:///forms.db") # Creates db
 
 class Base(DeclarativeBase):
     pass
+engine = sa.create_engine("postgresql://neondb_owner:npg_2iCJBEO0MIwj@ep-gentle-dream-addlnnjd-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
 
 class User(Base):
     __tablename__ = "User"

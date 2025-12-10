@@ -15,7 +15,7 @@ from routes.section_routes import router as section_router
 from routes.question_routes import router as question_router
 from routes.option_routes import router as option_router
 from routes.response_routes import router as response_router
-from schema import UserDTO, UserCreate, UserLoginDTO
+from schema import UserDTO, UserCreate, UserLoginDTO, LoginDTO
 
 app = FastAPI()
 app.include_router(user_router)
@@ -67,19 +67,36 @@ def create_user(user: UserCreate):
 
     return user_dto
 
+@app.get("/users")
+def get_all_users():
+    with Session(engine) as session:
+        users = session.query(User).all()
+        return [UserDTO.model_validate(user) for user in users]
+
 @app.post("/login")
 def login_user(user_info: UserLoginDTO):
     with Session(engine) as session:
-        user = session.query(User).filter(User.username == user_info.username).first()
-        if not user:
+        user_obj = session.query(User).filter(User.username == user_info.username).first()
+        if not user_obj:
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        if not verify_password(user_info.password, user.password_hash):
+        print(f"user details {user_obj.__dict__}")
+        print("user password ", user_obj.password_hash)
+        print("user_info password ", user_info.password)
+        if user_obj.password_hash != hash_password(user_info.password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         access_token = create_access_token(user_info.username)
         refresh_token = create_access_token(user_info.username, timedelta(days=30))
 
-        return UserDTO.model_validate(user)
+        return LoginDTO(
+            user_id=user_obj.user_id,
+            username=user_obj.username,
+            fullname=user_obj.fullname,
+            email_address=user_obj.email_address,
+            pic_url=user_obj.pic_url,
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
 
 def handler(event, context):
     asgi_handler = Mangum(app)

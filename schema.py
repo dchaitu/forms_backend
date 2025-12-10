@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 from enums import QuestionType
@@ -22,6 +23,10 @@ class UserDTO(BaseModel):
     email_address: str
     pic_url: Optional[str] = None
 
+class LoginDTO(UserDTO):
+    access_token: str
+    refresh_token: str
+
 
 class FormCreate(BaseModel):
     title: str
@@ -35,6 +40,7 @@ class FormDTO(BaseModel):
     title: str
     description: str
     response_link: Optional[str] = None
+    created_at: datetime = None
 
 class FormCompleteDTO(FormCreate):
     form_id: int
