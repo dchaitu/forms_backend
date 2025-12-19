@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
 class UserLoginDTO(BaseModel):
     username: str
     password: str
+    recaptcha_token: str
 
 class UserDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -26,6 +27,7 @@ class UserDTO(BaseModel):
 class LoginDTO(UserDTO):
     access_token: str
     refresh_token: str
+    recaptcha_token: str
 
 
 class FormCreate(BaseModel):
@@ -41,6 +43,7 @@ class FormDTO(BaseModel):
     description: str
     response_link: Optional[str] = None
     created_at: datetime = None
+    created_by: int
 
 class FormCompleteDTO(FormCreate):
     form_id: int

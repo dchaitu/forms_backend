@@ -95,7 +95,8 @@ def login_user(user_info: UserLoginDTO):
             email_address=user_obj.email_address,
             pic_url=user_obj.pic_url,
             access_token=access_token,
-            refresh_token=refresh_token
+            refresh_token=refresh_token,
+            recaptcha_token=user_info.recaptcha_token
         )
 
 def handler(event, context):

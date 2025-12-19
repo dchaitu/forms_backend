@@ -5,7 +5,9 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
+from fastapi.params import Depends
 
+from constants import get_current_user
 from models import Form, engine, Section, Question, Response, User
 from schema import FormCreate, FormDTO, FormDetailsDTO, FormCompleteDetailsDTO, SectionCompleteDetailsDTO, QuestionDTO, \
     OptionDTO, ResponseDTO
@@ -14,9 +16,19 @@ router = APIRouter(prefix='/form', tags=['Form'])
 
 
 @router.post("/create/", response_model=FormDTO)
-def create_form(form_create: FormCreate):
+def create_form(form_create: FormCreate, current_user: User = Depends(get_current_user)):
     with Session(engine) as session:
-        db_form = Form(**form_create.model_dump())
+        print("current_user ", current_user)
+        # print("current_user.username ", current_user.username)
+        db_user = session.query(User).filter(User.username == current_user).first()
+        print("db_user ", db_user.username)
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        # form_data = form_create.model_dump()
+        db_form = Form(
+            title=form_create.title,
+            description=form_create.description,
+            created_by=db_user.user_id)
         session.add(db_form)
         session.commit()
         session.refresh(db_form)
@@ -80,9 +92,17 @@ def get_user_forms(user_id: int)-> list[FormDTO]:
         return forms_dtos
 
 @router.get("/{form_id}", response_model=FormDetailsDTO)
-def get_form(form_id: int):
+def get_form(form_id: int, current_user: User = Depends(get_current_user)):
     with Session(engine) as session:
         form = session.get(Form, form_id)
+        print("current_user ", current_user)
+        print("form.user ", form.user)
+        print("form.user.username ", form.user.username)
+        if form.user.username != current_user:
+            raise HTTPException(
+                status_code=403,
+                detail="You don't have permission to access this form"
+            )
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
         return FormDetailsDTO.model_validate(form)
@@ -98,7 +118,7 @@ def delete_form(form_id: int):
     return {"message": "Form deleted successfully"}
 
 @router.get("/{form_id}/complete/", response_model=FormCompleteDetailsDTO)
-def get_form_complete_details(form_id: int):
+def get_form_complete_details(form_id: int, current_user: User = Depends(get_current_user)):
     with Session(engine) as session:
         form = (
             session.query(Form)
@@ -114,6 +134,14 @@ def get_form_complete_details(form_id: int):
 
         if not form:
             raise HTTPException(status_code=404, detail="Form not found")
+        print("*"*30)
+        print(form.user.username, current_user)
+        print("*" * 30)
+        if form.user.username != current_user:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You don't have permission to access this form as it is created by {form.user.username}"
+            )
         sections_dto = []
         for section in form.sections:
             # Build nested question DTOs manually
