@@ -1,3 +1,5 @@
 .venv
 .idea
 forms.db
+__pycache__
+.env
